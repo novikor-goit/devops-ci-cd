@@ -23,4 +23,9 @@ variable "vpc_name" {
   type        = string
 }
 
+variable "eks_cluster_name" {
+  description = "Назва EKS-кластера для тегування сабнетів під Kubernetes"
+  type        = string
+  default     = ""
+}
 

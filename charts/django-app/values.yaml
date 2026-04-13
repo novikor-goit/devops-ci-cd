@@ -1,0 +1,26 @@
+replicaCount: 2
+
+image:
+  repository: 181765985441.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8000
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+configMap:
+  ALLOWED_HOSTS: "*"
+  POSTGRES_HOST: db
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: user
+  POSTGRES_DB: db
+  POSTGRES_PASSWORD: password
+

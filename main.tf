@@ -17,6 +17,7 @@ module "vpc" {
   private_subnets    = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
   availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
   vpc_name           = "lesson-5-vpc"
+  eks_cluster_name   = "eks-cluster-demo"
 }
 # Підключаємо модуль ECR
 module "ecr" {
@@ -25,3 +26,15 @@ module "ecr" {
   scan_on_push = true
 }
 
+module "eks" {
+  source              = "./modules/eks"
+  cluster_name        = "eks-cluster-demo"
+  cluster_version     = "1.30"
+  cluster_subnet_ids  = concat(module.vpc.public_subnets, module.vpc.private_subnets)
+  node_subnet_ids     = module.vpc.private_subnets
+  node_group_name     = "general"
+  node_instance_types = ["t3.medium"]
+  desired_size        = 1
+  max_size            = 2
+  min_size            = 1
+}
