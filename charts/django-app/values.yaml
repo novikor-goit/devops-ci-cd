@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: <AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr
+  repository: 181765985441.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr
   pullPolicy: Always
-  tag: "latest"
+  tag: 4
 
 service:
   type: LoadBalancer
