@@ -28,11 +28,11 @@ spec:
             - configMapRef:
                 name: {{ include "django-app.fullname" . }}-config
           env:
-            - name: POSTGRES_PASSWORD
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "django-app.fullname" . }}-secret
-                  key: POSTGRES_PASSWORD
+                  key: DB_PASSWORD
           resources:
             requests:
               cpu: 100m

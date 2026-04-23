@@ -47,16 +47,18 @@
 
 ### Робота із застосунком (Docker & Helm)
 
-1. **Авторизація та завантаження образу в ECR (з минулих лекцій):**
+1. **Авторизація та завантаження образу в ECR:**
    ```bash
    aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com
-   docker build -t lesson-5-ecr .
-   docker tag lesson-5-ecr:latest <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr:latest
-   docker push <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr:latest
+   cd django
+   docker build -t goit-devops/django-app .
+   docker tag goit-devops/django-app <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/goit-devops/django-app:latest
+   docker push <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/goit-devops/django-app:latest
    ```
 
 2. **Розгортання Django-застосунку через Helm:**
    ```bash
+   aws eks --region eu-north-1 update-kubeconfig --name eks-cluster-demo
    helm install django-app ./charts/django-app
    ```
 

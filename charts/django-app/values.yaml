@@ -18,11 +18,12 @@ autoscaling:
 
 configMap:
   ALLOWED_HOSTS: "*"
-  POSTGRES_HOST: db
-  POSTGRES_PORT: 5432
-  POSTGRES_USER: user
-  POSTGRES_DB: db
+  DB_ENGINE: django.db.backends.sqlite3
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_USER: user
+  DB_NAME: db.sqlite3
 
 secret:
-  POSTGRES_PASSWORD: ""  # Override: --set secret.POSTGRES_PASSWORD=yourpassword
+  DB_PASSWORD: ""  # Override: --set secret.DB_PASSWORD=yourpassword
 
