@@ -6,7 +6,7 @@ metadata:
     {{- include "django-app.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
+  replicas: 1
   {{- end }}
   selector:
     matchLabels:
@@ -27,6 +27,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "django-app.fullname" . }}-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "django-app.fullname" . }}-secret
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 100m

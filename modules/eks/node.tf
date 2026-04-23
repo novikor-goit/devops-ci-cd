@@ -63,6 +63,12 @@ resource "aws_eks_node_group" "this" {
     ignore_changes = [scaling_config[0].desired_size]
   }
 
+  timeouts {
+    create = "60m"
+    update = "60m"
+    delete = "60m"
+  }
+
   depends_on = [
     aws_iam_role_policy_attachment.worker_node_policy,
     aws_iam_role_policy_attachment.cni_policy,

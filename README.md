@@ -42,17 +42,17 @@
 
 2. **Підключення локального kubectl до кластера EKS:**
    ```bash
-   aws eks update-kubeconfig --region us-west-2 --name eks-cluster-demo
+   aws eks update-kubeconfig --region eu-north-1 --name eks-cluster-demo
    ```
 
 ### Робота із застосунком (Docker & Helm)
 
 1. **Авторизація та завантаження образу в ECR (з минулих лекцій):**
    ```bash
-   aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com
+   aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com
    docker build -t lesson-5-ecr .
-   docker tag lesson-5-ecr:latest <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:latest
-   docker push <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr:latest
+   docker tag lesson-5-ecr:latest <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr:latest
+   docker push <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr:latest
    ```
 
 2. **Розгортання Django-застосунку через Helm:**

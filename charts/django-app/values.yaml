@@ -1,8 +1,8 @@
-replicaCount: 2
+replicaCount: 1
 
 image:
-  repository: 181765985441.dkr.ecr.us-west-2.amazonaws.com/lesson-5-ecr
-  pullPolicy: IfNotPresent
+  repository: <AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr
+  pullPolicy: Always
   tag: "latest"
 
 service:
@@ -12,8 +12,8 @@ service:
 
 autoscaling:
   enabled: true
-  minReplicas: 2
-  maxReplicas: 6
+  minReplicas: 1
+  maxReplicas: 2
   targetCPUUtilizationPercentage: 70
 
 configMap:
@@ -22,5 +22,7 @@ configMap:
   POSTGRES_PORT: 5432
   POSTGRES_USER: user
   POSTGRES_DB: db
-  POSTGRES_PASSWORD: password
+
+secret:
+  POSTGRES_PASSWORD: ""  # Override: --set secret.POSTGRES_PASSWORD=yourpassword
 
