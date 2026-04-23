@@ -94,11 +94,19 @@ terraform output argocd_url
 
 3. Увійдіть як `admin` з отриманим паролем.
 
-4. Додайте credentials (Manage Jenkins → Credentials → Global):
-   - `github-credentials` — тип **Username with password** (GitHub username + Personal Access Token зі scope `repo`)
-   - `ecr-registry-url` — тип **Secret text** (значення: `<AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr`)
+4. Створіть Kubernetes secret з AWS credentials (для Kaniko → ECR push):
+   ```bash
+   kubectl create secret generic aws-credentials \
+     -n jenkins \
+     --from-file=credentials=$HOME/.aws/credentials \
+     --from-file=config=$HOME/.aws/config
+   ```
 
-5. Створіть pipeline job:
+5. Додайте credentials (Manage Jenkins → Credentials → Global):
+   - `github-credentials` — тип **Username with password** (GitHub username + Personal Access Token зі scope `repo`)
+   - `aws-account-id` — тип **Secret text** (значення: ваш AWS Account ID, напр. `123456789012`)
+
+6. Створіть pipeline job:
    - New Item → Pipeline
    - Definition: **Pipeline script from SCM**
    - SCM: Git, Repository URL: `https://github.com/novikor-goit/devops-ci-cd.git`
