@@ -30,52 +30,135 @@
 ### eks
 Створює автоматично керований кластер AWS Elastic Kubernetes Service (EKS) версії 1.30. Також піднімає Node Group (на основі інстансів `t3.medium`) в приватних підмережах VPC для гарантування безпеки.
 
+### jenkins
+Встановлює Jenkins через Helm у namespace `jenkins` з типом сервісу `LoadBalancer`. Агент Jenkins використовує Kubernetes pod із контейнерами `kaniko` (збірка Docker-образів) та `git` (оновлення Helm chart).
+
+### argo_cd
+Встановлює Argo CD через Helm у namespace `argocd`. Автоматично реєструє `Application`, що стежить за гілкою `lesson-8-9` та шляхом `charts/django-app`, і синхронізує зміни у кластер (`prune: true`, `selfHeal: true`).
+
+---
+
+## CI/CD схема
+
+```
+[Git push] → [Jenkins pipeline]
+                ├── Kaniko: build Docker image → push to ECR (tag v1.0.N)
+                └── git: update charts/django-app/values.yaml → push to lesson-8-9
+                                          ↓
+                              [Argo CD detects change]
+                                          ↓
+                        [Helm sync django-app → EKS default namespace]
+```
+
+---
+
 ## Команди для роботи
 
-### Розгортання інфраструктури (Terraform)
+### 1. Як застосувати Terraform
 
-1. **Ініціалізація та застосування інфраструктури:**
+```bash
+# Ініціалізація провайдерів та модулів
+terraform init
+
+# Попередній перегляд змін
+terraform plan -var="jenkins_admin_password=YOUR_SECURE_PASSWORD"
+
+# Застосування інфраструктури (VPC + ECR + EKS + Jenkins + Argo CD)
+terraform apply -var="jenkins_admin_password=YOUR_SECURE_PASSWORD"
+
+# Підключення kubectl до кластера після apply
+aws eks update-kubeconfig --region eu-north-1 --name eks-cluster-demo
+
+# Отримати URL сервісів
+terraform output jenkins_url
+terraform output argocd_url
+```
+
+> ⚠️ Після застосування LoadBalancer-адреси з'являються через ~2-3 хвилини.
+> Виконайте `kubectl get svc -n jenkins` та `kubectl get svc -n argocd` для перевірки `EXTERNAL-IP`.
+
+---
+
+### 2. Як перевірити Jenkins job
+
+**Налаштування перед першим запуском:**
+
+1. Отримайте пароль адміністратора:
    ```bash
-   terraform init
-   terraform apply
+   # Команда виводиться у terraform output:
+   terraform output jenkins_admin_password_cmd
+   # Виконайте команду, яку повернув output
    ```
 
-2. **Підключення локального kubectl до кластера EKS:**
+2. Відкрийте Jenkins у браузері за `EXTERNAL-IP` на порту `8080`.
+
+3. Увійдіть як `admin` з отриманим паролем.
+
+4. Додайте credentials (Manage Jenkins → Credentials → Global):
+   - `github-credentials` — тип **Username with password** (GitHub username + Personal Access Token зі scope `repo`)
+   - `ecr-registry-url` — тип **Secret text** (значення: `<AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/lesson-5-ecr`)
+
+5. Створіть pipeline job:
+   - New Item → Pipeline
+   - Definition: **Pipeline script from SCM**
+   - SCM: Git, Repository URL: `https://github.com/novikor-goit/devops-ci-cd.git`
+   - Branch: `*/lesson-8-9`
+   - Script Path: `Jenkinsfile`
+
+**Запуск та перевірка:**
+
+```bash
+# Після запуску job перевірте новий образ в ECR
+aws ecr list-images --repository-name lesson-5-ecr --region eu-north-1
+
+# Перевірте, що values.yaml оновився в Git
+git pull origin lesson-8-9
+grep "tag:" charts/django-app/values.yaml
+```
+
+---
+
+### 3. Як побачити результат в Argo CD
+
+1. Отримайте початковий пароль адміністратора:
    ```bash
-   aws eks update-kubeconfig --region eu-north-1 --name eks-cluster-demo
+   terraform output argocd_admin_password_cmd
+   # Виконайте команду, яку повернув output
+   ```
+   Або напряму:
+   ```bash
+   kubectl get secret argocd-initial-admin-secret -n argocd \
+     -o jsonpath='{.data.password}' | base64 -d
    ```
 
-### Робота із застосунком (Docker & Helm)
-
-1. **Авторизація та завантаження образу в ECR:**
+2. Відкрийте Argo CD UI за `EXTERNAL-IP` сервісу `argo-cd-argocd-server`:
    ```bash
-   aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com
-   cd django
-   docker build -t goit-devops/django-app .
-   docker tag goit-devops/django-app <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/goit-devops/django-app:latest
-   docker push <ВАШ_AWS_ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/goit-devops/django-app:latest
+   kubectl get svc argo-cd-argocd-server -n argocd
    ```
 
-2. **Розгортання Django-застосунку через Helm:**
+3. Увійдіть: логін `admin`, пароль з кроку 1.
+
+4. На головній сторінці побачите Application **django-app**:
+   - **Status**: `Synced` / `Healthy` — розгортання успішне.
+   - **Revision**: поточний коміт гілки `lesson-8-9`.
+   - Клікніть на застосунок → побачите поди, сервіси, HPA у кластері.
+
+5. Після кожного запуску Jenkins pipeline Argo CD автоматично виявить зміну тегу в `values.yaml` і синхронізує новий образ:
    ```bash
-   aws eks --region eu-north-1 update-kubeconfig --name eks-cluster-demo
-   helm install django-app ./charts/django-app
+   # Перевірити стан синхронізації через CLI
+   kubectl get application django-app -n argocd
+
+   # Переглянути поди застосунку після деплою
+   kubectl get pods -n default
    ```
 
-3. **Перевірка стану масштабування (HPA), подів та сервісів:**
-   ```bash
-   kubectl get pods,svc,hpa
-   ```
-   *Зверніть увагу на поле `EXTERNAL-IP` у виводі сервісу `django-app` — саме за цим посиланням буде доступний застосунок.*
+---
 
 ### Очищення ресурсів
 
-1. **Видалення застосунку з кластера:**
-   ```bash
-   helm uninstall django-app
-   ```
+> ⚠️ **УВАГА:** Обов'язково видаляйте ресурси після перевірки, щоб уникнути зайвих витрат.
 
-2. **Видалення інфраструктури AWS:**
-   ```bash
-   terraform destroy
-   ```
+```bash
+# Видалення всієї інфраструктури
+terraform destroy -var="jenkins_admin_password=YOUR_SECURE_PASSWORD"
+```

@@ -1,0 +1,9 @@
+server:
+  service:
+    type: LoadBalancer
+  extraArgs:
+    - --insecure
+
+configs:
+  params:
+    server.insecure: true

@@ -1,0 +1,15 @@
+applications:
+  - name: django-app
+    namespace: argocd
+    project: default
+    repoURL: https://github.com/novikor-goit/devops-ci-cd.git
+    targetRevision: lesson-8-9
+    path: charts/django-app
+    destinationNamespace: default
+    destinationServer: https://kubernetes.default.svc
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+      syncOptions:
+        - CreateNamespace=true

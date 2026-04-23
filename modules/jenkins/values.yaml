@@ -1,0 +1,28 @@
+persistence:
+  enabled: false
+
+controller:
+  serviceType: LoadBalancer
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - configuration-as-code
+    - credentials
+    - plain-credentials
+    - github
+  JCasC:
+    defaultConfig: true
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: "300m"
+      memory: "768Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1500Mi"
+
+agent:
+  enabled: true
+
