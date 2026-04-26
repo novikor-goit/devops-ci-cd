@@ -4,6 +4,19 @@ resource "kubernetes_namespace" "jenkins" {
   }
 }
 
+resource "null_resource" "delete_jenkins_lb" {
+  depends_on = [helm_release.jenkins]
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      kubectl delete svc jenkins -n jenkins --ignore-not-found=true 2>/dev/null || true
+      timeout 120 bash -c 'while kubectl get svc jenkins -n jenkins 2>/dev/null | grep -q LoadBalancer; do sleep 5; done' || true
+      sleep 30
+    EOT
+  }
+}
+
 resource "helm_release" "jenkins" {
   name       = "jenkins"
   namespace  = kubernetes_namespace.jenkins.metadata[0].name
