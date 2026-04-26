@@ -52,3 +52,34 @@ output "argocd_admin_password_cmd" {
   description = "Command to retrieve Argo CD initial admin password"
   value       = module.argo_cd.admin_password_cmd
 }
+
+output "rds_db_endpoint" {
+  description = "Endpoint стандартного RDS (null при use_aurora=true)"
+  value       = module.rds.db_endpoint
+}
+
+output "rds_aurora_cluster_endpoint" {
+  description = "Writer endpoint Aurora кластера (null при use_aurora=false)"
+  value       = module.rds.aurora_cluster_endpoint
+}
+
+output "rds_aurora_reader_endpoint" {
+  description = "Reader endpoint Aurora кластера (null при use_aurora=false)"
+  value       = module.rds.aurora_reader_endpoint
+}
+
+output "rds_db_port" {
+  description = "Порт підключення до БД"
+  value       = module.rds.db_port
+}
+
+output "rds_security_group_id" {
+  description = "ID Security Group БД"
+  value       = module.rds.security_group_id
+}
+
+output "rds_db_name" {
+  description = "Назва бази даних"
+  value       = module.rds.db_name
+}
+

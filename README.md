@@ -10,6 +10,7 @@
     - `vpc/` — Модуль для мережевої інфраструктури (VPC, підмережі, IGW, NAT GW), адаптований під EKS.
     - `ecr/` — Модуль для створення Elastic Container Registry.
     - `eks/` — Модуль для створення кластера Kubernetes (Control plane) та Node Group (Worker nodes).
+    - `rds/` — Модуль для створення бази даних (Aurora Cluster або стандартна RDS instance).
 - `charts/django-app/` — Каталог із Helm-чартом для нашого застосунку.
 
 ## Опис модулів
@@ -35,6 +36,105 @@
 
 ### argo_cd
 Встановлює Argo CD через Helm у namespace `argocd`. Автоматично реєструє `Application`, що стежить за гілкою `lesson-8-9` та шляхом `charts/django-app`, і синхронізує зміни у кластер (`prune: true`, `selfHeal: true`).
+
+### rds
+Універсальний модуль для створення реляційної бази даних на AWS. Підтримує два режими залежно від значення `use_aurora`:
+
+- `use_aurora = false` (дефолт) → одна `aws_db_instance` (PostgreSQL, MySQL тощо)
+- `use_aurora = true` → `aws_rds_cluster` + writer instance + reader replicas
+
+В обох випадках автоматично створюються: `aws_db_subnet_group`, `aws_security_group`, parameter group з вказаними параметрами.
+
+#### Приклад використання
+
+```hcl
+module "rds" {
+  source = "./modules/rds"
+
+  name       = "myapp-db"
+  use_aurora = false          # true = Aurora Cluster
+
+  # RDS-only (ігнорується при use_aurora=true)
+  engine                     = "postgres"
+  engine_version             = "17.2"
+  parameter_group_family_rds = "postgres17"
+
+  # Aurora-only (ігнорується при use_aurora=false)
+  engine_cluster                = "aurora-postgresql"
+  engine_version_cluster        = "15.3"
+  parameter_group_family_aurora = "aurora-postgresql15"
+  aurora_instance_count         = 2   # 1 writer + 1 reader
+
+  # Спільні параметри
+  instance_class          = "db.t3.medium"
+  allocated_storage       = 20
+  db_name                 = "myapp"
+  username                = "postgres"
+  password                = var.db_password
+  vpc_id                  = module.vpc.vpc_id
+  subnet_private_ids      = module.vpc.private_subnets
+  subnet_public_ids       = module.vpc.public_subnets
+  publicly_accessible     = false
+  multi_az                = true
+  backup_retention_period = 7
+
+  parameters = {
+    max_connections = "200"
+    log_statement   = "all"
+    work_mem        = "4096"
+  }
+
+  tags = {
+    Environment = "production"
+    Project     = "myapp"
+  }
+}
+```
+
+#### Змінні модуля `rds`
+
+| Змінна | Тип | Дефолт | Опис |
+|--------|-----|--------|------|
+| `name` | string | — | Prefix для всіх ресурсів |
+| `use_aurora` | bool | `false` | `true` = Aurora Cluster, `false` = RDS instance |
+| `engine` | string | `"postgres"` | Engine для стандартного RDS |
+| `engine_version` | string | `"14.7"` | Версія engine для стандартного RDS |
+| `parameter_group_family_rds` | string | `"postgres15"` | Сімейство PG для стандартного RDS |
+| `engine_cluster` | string | `"aurora-postgresql"` | Engine для Aurora |
+| `engine_version_cluster` | string | `"15.3"` | Версія engine для Aurora |
+| `parameter_group_family_aurora` | string | `"aurora-postgresql15"` | Сімейство PG для Aurora |
+| `aurora_instance_count` | number | `2` | Кількість інстансів Aurora (1 writer + N-1 readers) |
+| `instance_class` | string | `"db.t3.micro"` | Клас інстансу |
+| `allocated_storage` | number | `20` | Розмір сховища у GB (тільки RDS) |
+| `db_name` | string | — | Назва бази даних |
+| `username` | string | — | Ім'я адміністратора |
+| `password` | string | — | Пароль (sensitive) |
+| `vpc_id` | string | — | ID VPC |
+| `subnet_private_ids` | list(string) | — | ID приватних підмереж |
+| `subnet_public_ids` | list(string) | — | ID публічних підмереж |
+| `publicly_accessible` | bool | `false` | Публічний доступ |
+| `multi_az` | bool | `false` | Multi-AZ (тільки RDS) |
+| `backup_retention_period` | number | `7` | Днів зберігання резервних копій |
+| `parameters` | map(string) | `{}` | Параметри для parameter group |
+| `tags` | map(string) | `{}` | Теги ресурсів |
+
+#### Як змінити тип БД / engine / клас інстансу
+
+```hcl
+# MySQL замість PostgreSQL
+engine                     = "mysql"
+engine_version             = "8.0"
+parameter_group_family_rds = "mysql8.0"
+
+# Aurora MySQL
+use_aurora                    = true
+engine_cluster                = "aurora-mysql"
+engine_version_cluster        = "8.0.mysql_aurora.3.04.0"
+parameter_group_family_aurora = "aurora-mysql8.0"
+
+# Змінити клас інстансу (prod-ready)
+instance_class = "db.r6g.large"
+```
 
 ---
 
