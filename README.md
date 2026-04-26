@@ -163,8 +163,13 @@ terraform init
 # Попередній перегляд змін
 terraform plan -var="jenkins_admin_password=YOUR_SECURE_PASSWORD"
 
-# Застосування інфраструктури (VPC + ECR + EKS + Jenkins + Argo CD)
+# Застосування інфраструктури (VPC + ECR + EKS + Jenkins + Argo CD + RDS)
 terraform apply -var="jenkins_admin_password=YOUR_SECURE_PASSWORD"
+
+# Перевизначити пароль БД (за замовчуванням abcABC123):
+terraform apply \
+  -var="jenkins_admin_password=YOUR_SECURE_PASSWORD" \
+  -var="db_password=YOUR_DB_PASSWORD"
 
 # Підключення kubectl до кластера після apply
 aws eks update-kubeconfig --region eu-north-1 --name eks-cluster-demo

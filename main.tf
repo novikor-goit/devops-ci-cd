@@ -90,22 +90,21 @@ module "rds" {
   aurora_instance_count      = 2
 
   # --- Aurora-only ---
-  engine_cluster             = "aurora-postgresql"
-  engine_version_cluster     = "15.3"
-  parameter_group_family_aurora = "aurora-postgresql15"
-
+  engine_cluster                = "aurora-mysql"
+  engine_version_cluster        = "8.0.mysql_aurora.3.04.0"
+  parameter_group_family_aurora = "aurora-mysql8.0"
 
   # --- RDS-only ---
-  engine                     = "postgres"
-  engine_version             = "17.2"
-  parameter_group_family_rds = "postgres17"
+  engine                     = "mysql"
+  engine_version             = "8.0"
+  parameter_group_family_rds = "mysql8.0"
 
   # Common
   instance_class             = "db.t3.medium"
   allocated_storage          = 20
   db_name                    = "myapp"
-  username                   = "postgres"
-  password                   = "abcABC123"
+  username                   = "admin"
+  password                   = var.db_password
   subnet_private_ids         = module.vpc.private_subnets
   subnet_public_ids          = module.vpc.public_subnets
   publicly_accessible        = true
@@ -113,8 +112,8 @@ module "rds" {
   multi_az                   = true
   backup_retention_period    = 7
   parameters = {
-    max_connections              = "200"
-    log_min_duration_statement   = "500"
+    max_connections                 = "200"
+    log_bin_trust_function_creators = "1"
   }
 
   tags = {

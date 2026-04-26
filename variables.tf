@@ -4,3 +4,10 @@ variable "jenkins_admin_password" {
   sensitive   = true
   default     = "abcABC123"
 }
+
+variable "db_password" {
+  description = "Master password for the RDS / Aurora database"
+  type        = string
+  sensitive   = true
+  default     = "abcABC123"
+}
