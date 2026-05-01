@@ -83,3 +83,12 @@ output "rds_db_name" {
   value       = module.rds.db_name
 }
 
+output "grafana_port_forward_cmd" {
+  description = "Command to access Grafana via port-forward"
+  value       = module.monitoring.grafana_port_forward_cmd
+}
+
+output "grafana_admin_password_cmd" {
+  description = "Command to retrieve Grafana admin password"
+  value       = module.monitoring.grafana_admin_password_cmd
+}

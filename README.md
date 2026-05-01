@@ -11,6 +11,9 @@
     - `ecr/` — Модуль для створення Elastic Container Registry.
     - `eks/` — Модуль для створення кластера Kubernetes (Control plane) та Node Group (Worker nodes).
     - `rds/` — Модуль для створення бази даних (Aurora Cluster або стандартна RDS instance).
+    - `jenkins/` — Модуль для Helm-установки Jenkins у namespace `jenkins`.
+    - `argo_cd/` — Модуль для Helm-установки Argo CD у namespace `argocd`.
+    - `monitoring/` — Модуль для Helm-установки `kube-prometheus-stack` (Prometheus + Grafana + AlertManager) у namespace `monitoring`.
 - `charts/django-app/` — Каталог із Helm-чартом для нашого застосунку.
 
 ## Опис модулів
@@ -29,13 +32,21 @@
 Створює репозиторій для Docker-образів з підтримкою автоматичного сканування на вразливості при кожному пуші (`scan_on_push = true`) та базовою політикою доступу.
 
 ### eks
-Створює автоматично керований кластер AWS Elastic Kubernetes Service (EKS) версії 1.30. Також піднімає Node Group (на основі інстансів `t3.medium`) в приватних підмережах VPC для гарантування безпеки.
+Створює автоматично керований кластер AWS Elastic Kubernetes Service (EKS) версії 1.32. Також піднімає Node Group (на основі інстансів `t3.medium`) в приватних підмережах VPC для гарантування безпеки. Встановлює EBS CSI Driver як EKS addon (потрібен для Persistent Volumes).
 
 ### jenkins
 Встановлює Jenkins через Helm у namespace `jenkins` з типом сервісу `LoadBalancer`. Агент Jenkins використовує Kubernetes pod із контейнерами `kaniko` (збірка Docker-образів) та `git` (оновлення Helm chart).
 
 ### argo_cd
 Встановлює Argo CD через Helm у namespace `argocd`. Автоматично реєструє `Application`, що стежить за гілкою `lesson-8-9` та шляхом `charts/django-app`, і синхронізує зміни у кластер (`prune: true`, `selfHeal: true`).
+
+### monitoring
+Встановлює `kube-prometheus-stack` через Helm у namespace `monitoring`. Включає:
+- **Prometheus** — збір та зберігання метрик кластера і застосунку.
+- **Grafana** — візуалізація метрик (доступна за `svc/grafana` на порту 80).
+- **AlertManager** — маршрутизація та агрегація алертів.
+- **kube-state-metrics** — метрики стану Kubernetes ресурсів.
+- **node-exporter** — метрики вузлів кластера (CPU, RAM, диск).
 
 ### rds
 Універсальний модуль для створення реляційної бази даних на AWS. Підтримує два режими залежно від значення `use_aurora`:
@@ -163,20 +174,22 @@ terraform init
 # Попередній перегляд змін
 terraform plan -var="jenkins_admin_password=YOUR_SECURE_PASSWORD"
 
-# Застосування інфраструктури (VPC + ECR + EKS + Jenkins + Argo CD + RDS)
+# Застосування інфраструктури (VPC + ECR + EKS + Jenkins + Argo CD + RDS + Monitoring)
 terraform apply -var="jenkins_admin_password=YOUR_SECURE_PASSWORD"
 
-# Перевизначити пароль БД (за замовчуванням abcABC123):
+# Перевизначити паролі (за замовчуванням abcABC123):
 terraform apply \
   -var="jenkins_admin_password=YOUR_SECURE_PASSWORD" \
-  -var="db_password=YOUR_DB_PASSWORD"
+  -var="db_password=YOUR_DB_PASSWORD" \
+  -var="grafana_admin_password=YOUR_GRAFANA_PASSWORD"
 
 # Підключення kubectl до кластера після apply
 aws eks update-kubeconfig --region eu-north-1 --name eks-cluster-demo
 
-# Отримати URL сервісів
+# Отримати URL сервісів та команди доступу
 terraform output jenkins_url
 terraform output argocd_url
+terraform output grafana_port_forward_cmd
 ```
 
 > ⚠️ Після застосування LoadBalancer-адреси з'являються через ~2-3 хвилини.
@@ -267,11 +280,42 @@ grep "tag:" charts/django-app/values.yaml
 
 ---
 
+### 4. Моніторинг: Prometheus + Grafana
+
+Після `terraform apply` стек моніторингу доступний у namespace `monitoring`.
+
+**Перевірити стан всіх компонентів:**
+```bash
+kubectl get all -n monitoring
+```
+
+**Відкрити Grafana у браузері:**
+```bash
+# Прокинути порт на localhost:3000
+kubectl port-forward svc/grafana 3000:80 -n monitoring
+# Відкрийте http://localhost:3000
+```
+
+**Отримати пароль адміністратора Grafana:**
+```bash
+terraform output grafana_admin_password_cmd
+# Виконайте команду, яку повернув output
+```
+Або напряму:
+```bash
+kubectl get secret grafana -n monitoring \
+  -o jsonpath='{.data.admin-password}' | base64 -d
+```
+
+Логін: `admin`. Grafana за замовчуванням має дашборди для кластера EKS (CPU, RAM, pods, nodes).
+
+---
+
 ### Очищення ресурсів
 
 > ⚠️ **УВАГА:** Обов'язково видаляйте ресурси після перевірки, щоб уникнути зайвих витрат.
 
 ```bash
 # Видалення всієї інфраструктури
-terraform destroy -var="jenkins_admin_password=YOUR_SECURE_PASSWORD"
+terraform destroy
 ```
